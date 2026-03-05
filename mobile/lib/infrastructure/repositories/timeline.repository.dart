@@ -424,7 +424,7 @@ class DriftTimelineRepository extends DriftDatabaseRepository {
   Stream<List<Bucket>> _watchPersonBucket(String userId, String personId, {GroupAssetsBy groupBy = GroupAssetsBy.day}) {
     if (groupBy == GroupAssetsBy.none) {
       final query = _db.remoteAssetEntity.selectOnly()
-        ..addColumns([_db.remoteAssetEntity.id.count()])
+        ..addColumns([_db.remoteAssetEntity.id.count(distinct: true)])
         ..join([
           innerJoin(
             _db.assetFaceEntity,
@@ -442,12 +442,12 @@ class DriftTimelineRepository extends DriftDatabaseRepository {
         );
 
       return query.map((row) {
-        final count = row.read(_db.remoteAssetEntity.id.count())!;
+        final count = row.read(_db.remoteAssetEntity.id.count(distinct: true))!;
         return _generateBuckets(count);
       }).watchSingle();
     }
 
-    final assetCountExp = _db.remoteAssetEntity.id.count();
+    final assetCountExp = _db.remoteAssetEntity.id.count(distinct: true);
     final dateExp = _db.remoteAssetEntity.effectiveCreatedAt(groupBy);
 
     final query = _db.remoteAssetEntity.selectOnly()
@@ -499,6 +499,7 @@ class DriftTimelineRepository extends DriftDatabaseRepository {
                 _db.assetFaceEntity.isVisible.equals(true) &
                 _db.assetFaceEntity.deletedAt.isNull(),
           )
+          ..groupBy([_db.remoteAssetEntity.id])
           ..orderBy([OrderingTerm.desc(_db.remoteAssetEntity.createdAt)])
           ..limit(count, offset: offset);
 
